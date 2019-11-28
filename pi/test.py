@@ -6,6 +6,7 @@ import time, serial
 from PIL import ImageTk, Image
 import random
 
+#BOO
 random.seed()
 ser = serial.Serial('/dev/ttyS0', 115200, timeout=1)
 ser.close()
@@ -19,6 +20,7 @@ count = -1
 addType=''
 addDays=list('mtwrfsn')
 scanDay=''
+user=''
 
 #def clicked(str1):
 #    ser.write(str.encode(str1))
@@ -42,6 +44,27 @@ def oneSelect(btn, btn1, btn2, btn3, day):
         btn['bg'] = 'red'
         btn['activebackground'] = 'red'
         addType=''
+        
+def oneUserSelect(master, btn, btn1, btn2, btn3, name):
+    global user
+    if btn['bg'] == 'red':
+        btn['bg'] = 'blue'
+        btn['activebackground'] = 'blue'
+        user = name
+        if btn1['bg'] == 'blue':
+            btn1['bg'] = 'red'
+            btn1['activebackground'] = 'red'
+        if btn2['bg'] == 'blue':
+            btn2['bg'] = 'red'
+            btn2['activebackground'] = 'red'
+        if btn3['bg'] == 'blue':
+            btn3['bg'] = 'red'
+            btn3['activebackground'] = 'red'
+    else:
+        btn['bg'] = 'red'
+        btn['activebackground'] = 'red'
+        user=''
+    master.switch_frame(PageOne)
 
 def oneDaySelect(btn, btn1, btn2, btn3, btn4, btn5, btn6, day):
     global scanDay
@@ -112,13 +135,16 @@ def scanRFID(master):
     entry = '1' + scanDay
     ser.write(str.encode(entry))
 
-  
+def listRFID(master):
+    master.switch_frame(PageNine)
+    entry = '4' + user
+    ser.write(str.encode(entry))
     
 #Initialize GUI
 class SampleApp(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
-        self.attributes("-fullscreen", True)
+        self.attributes("-fullscreen", False)
         self.configure(background='black')
         self.bind("<Escape>", lambda event: self.attributes("-fullscreen", False))
         self.bind("<F11>", lambda event: self.attributes("-fullscreen", True))
@@ -142,35 +168,42 @@ class StartPage(tk.Frame):
         tk.Frame.configure(self,bg='black')
         
         file = str(random.randrange(1, 5))
-        file += ".jpg"
-        file = "/home/pi/run/" + file
+        file = "/home/pi/run/" + file + ".jpg"
         self.background = ImageTk.PhotoImage(Image.open(file))
         canvas = tk.Canvas(self, width=800, height=480, bg='blue')
         canvas.pack(expand = tk.YES, fill = tk.BOTH)
         canvas.create_image(0, 0, image = self.background, anchor = tk.NW)
-        #canvas.create_text(400, 0, text="Hello!", anchor="n", fill='red', font=('Helvetica', 64,"bold"))
 
         btn = Button(self, text="Menu", font=('Helvetica', 55, "bold"), activebackground='red',
-                     bg='red', command=lambda:master.switch_frame(PageOne))
+                     bg='red', command=lambda:master.switch_frame(PageNineteen))
         btn.place(x=400, y=480, anchor="s")
 
         tk.Button(self, text="Debug", font=('Helvetica', 24, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(pageList[15])).place(x=800, y=480, anchor="se")
+                     bg='blue', command=lambda:master.switch_frame(pageList[11])).place(x=800, y=480, anchor="se")
         
-        clock = Label(self, text=time1, font=('times', 100, 'bold'), fg='red', bg='black')
-        clock.place(x=400, y=0, anchor="n")
+        global clock
+        clock = canvas.create_text(400, 0, text=time1, anchor="n", fill='white', font=('Helvetica', 100,"bold"))
+
+        while ser.inWaiting():
+            ser.read()
 
         def task():
-            #print("hello")
-            self.after(2000, task)
+            if ser.inWaiting():
+                entry = ser.read()
+                entry = entry.decode('utf-8')
+                if entry=='b':
+                    master.switch_frame(PageNine)
+                    return
+            self.after(500, task)
         def tick():
             global time1
-            global clock1
+            global clock
             time2 = time.strftime('%H:%M')
             if time2 != time1:
                 time1 = time2
-                clock.config(text=time2)
-            clock.after(200, tick)
+                canvas.delete(clock)
+                clock = canvas.create_text(400, 0, text=time2, anchor="n", fill='white', font=('Helvetica', 100,"bold"))
+            self.after(200, tick)
         tick()
         task()
         
@@ -181,16 +214,28 @@ class PageOne(tk.Frame):
         tk.Frame.__init__(self, master)
         tk.Frame.configure(self,bg='black')
 
-        tk.Label(self, text="Menu", fg='red', bg='black', font=('Helvetica', 36,
+        greeting = "Hello, "
+        if user == 'g':
+            greeting+="Gavin!"
+        if user == 'j':
+            greeting+="John!"
+        if user == 'k':
+            greeting+="Keith!"
+        if user == 'r':
+            greeting+="Rei!"
+            
+        tk.Label(self, text=greeting, fg='red', bg='black', font=('Helvetica', 48,
                                                                 "bold")).place(x=400, y=0, anchor="n")
-        tk.Button(self, text="Add a new RFID", font=('Helvetica', 36, "bold"), activebackground='red',
-                     bg='red', command=lambda:master.switch_frame(PageTwo)).place(x=400, y=180, anchor="s")
+        tk.Button(self, text="   Add a new RFID   ", font=('Helvetica', 36, "bold"), activebackground='red',
+                     bg='red', command=lambda:master.switch_frame(PageTwo)).place(x=400, y=155, anchor="s")
         tk.Button(self, text="Modify/Delete an RFID", font=('Helvetica', 36, "bold"), activebackground='red',
-                     bg='red', command=lambda:master.switch_frame(PageThree)).place(x=400, y=300, anchor="s")
-        tk.Button(self, text="Manual Scan", font=('Helvetica', 36, "bold"), activebackground='red',
-                     bg='red', command=lambda:master.switch_frame(PageFour)).place(x=400, y=420, anchor="s")
+                     bg='red', command=lambda:master.switch_frame(PageThree)).place(x=400, y=255, anchor="s")
+        tk.Button(self, text="    Manual Scan    ", font=('Helvetica', 36, "bold"), activebackground='red',
+                     bg='red', command=lambda:master.switch_frame(PageFour)).place(x=400, y=355, anchor="s")
+        tk.Button(self, text="      RFID List      ", font=('Helvetica', 36, "bold"), activebackground='red',
+                     bg='red', command=lambda:listRFID(master)).place(x=400, y=455, anchor="s")
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
+                     bg='blue', command=lambda:master.switch_frame(PageNineteen)).place(x=0, y=480, anchor="sw")
         self.after(60000, master.switch_frame, StartPage)
         
 
@@ -421,6 +466,9 @@ class PageNine(tk.Frame):
         scan.place(x=200, y=240, anchor="w")
         tk.Button(self, text="Cancel", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(PageOne)).place(x=0, y=480, anchor="sw")
+
+        while ser.inWaiting():
+            ser.read()
         
         def addDots():
             global count
@@ -433,9 +481,11 @@ class PageNine(tk.Frame):
         def respond():
             if ser.inWaiting():
                 entry = ser.read()
-                entry = entry.decode('utf-8')
-                if entry=='a':
-                    master.switch_frame(PageTen)
+                entry = ord(entry)
+                print(entry)
+                if entry < 21:
+                    master.switch_frame(pageList[entry])
+                    return
             self.after(1000, respond)
         addDots()
         respond()
@@ -619,10 +669,77 @@ class PageEighteen(tk.Frame):
         
         self.after(10000, master.switch_frame, StartPage)
 
+#User Select Menu
+class PageNineteen(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        tk.Frame.configure(self,bg='black')
+
+        global user
+        user=''
+
+        tk.Label(self, text="Main Menu", fg='red', bg='black', font=('Helvetica', 48,
+                    "bold")).place(x=400, y=0, anchor="n")
+        tk.Label(self, text="Which User?", fg='red', bg='black', font=('Helvetica', 36,
+                    "bold")).place(x=400, y=200, anchor="s")        
+        btn5 = tk.Button(self, text="Gavin", font=('Helvetica', 46, "bold"), activebackground='red',
+                     bg='red', command=lambda:oneUserSelect(master, btn5, btn6, btn7, btn8,'g'))
+        btn5.place(x=20, y=300, anchor="sw")
+        btn6 = tk.Button(self, text="John", font=('Helvetica', 46, "bold"), activebackground='red',
+                     bg='red', command=lambda:oneUserSelect(master, btn6, btn5, btn7, btn8, 'j'))
+        btn6.place(x=320, y=300, anchor="s")
+        btn7 = tk.Button(self, text="Keith", font=('Helvetica', 46, "bold"), activebackground='red',
+                     bg='red', command=lambda:oneUserSelect(master, btn7, btn6, btn5, btn8, 'k'))
+        btn7.place(x=515, y=300, anchor="s")
+        btn8 = tk.Button(self, text=" Rei ", font=('Helvetica', 46, "bold"), activebackground='red',
+                     bg='red', command=lambda:oneUserSelect(master, btn8, btn6, btn7, btn5, 'r'))
+        btn8.place(x=780, y=300, anchor="se")
+
+        btn12 = tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
+                     bg='blue', command=lambda:master.switch_frame(StartPage))
+        btn12.place(x=0, y=480, anchor="sw")
+        #btn13 = tk.Button(self, text="OK", font=('Helvetica', 50, "bold"), activebackground='green',
+        #             bg='green', command=lambda:master.switch_frame(PageOne))
+        #btn13.place(x=800, y=480, anchor="se")
+        self.after(10000, master.switch_frame, StartPage)
+
+#RFID List Screen
+class PageTwenty(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        tk.Frame.configure(self,bg='black')
+
+        wait = tk.Label(self, text="List for Keith:", fg='red', bg='black',
+                 font=('Helvetica',36, "bold"))
+        wait.place(x=400, y=0, anchor="n")
+
+        rfidTypeList = ["/home/pi/run/notebook.jpg", "/home/pi/run/textbook.jpg", "/home/pi/run/bag.jpg", "/home/pi/run/laptop.jpg"]
+        for i in range(8):
+            typeName = rfidTypeList[i%4]
+            typePic = ImageTk.PhotoImage(Image.open(typeName))
+            panel = Label(self, image=typePic)
+            panel.image = typePic
+            label = tk.Label(self, text="Textbook#8", fg='red', bg='black',
+                 font=('Helvetica', 24, "bold"))
+            label1 = tk.Label(self, text="M,T,W,R,F,S,N", fg='red', bg='black',
+                 font=('Helvetica', 20, "bold"))
+            if i%2==0:
+                panel.place(x=0, y=(50 + 100*i/2), anchor="nw")
+                label.place(x=110, y=(75 + 100*i/2), anchor="w")
+                label1.place(x=110, y=(110 + 100*i/2), anchor="w")
+            else:
+                panel.place(x=325, y=(50 + 100*(i-1)/2), anchor="nw")
+                label.place(x=435, y=(75 + 100*(i-1)/2), anchor="w")
+                label1.place(x=435, y=(110 + 100*(i-1)/2), anchor="w")
+
+        tk.Button(self, text="OK", font=('Helvetica', 64, "bold"), activebackground='green',
+                     bg='green', command=lambda:master.switch_frame(StartPage)).place(x=800, y=480, anchor="se")
+
+        self.after(10000, master.switch_frame, StartPage)
 
 pageList=[StartPage,PageOne,PageTwo,PageThree,PageFour,PageFive,PageSix,PageSeven,
           PageEight,PageNine,PageTen,PageEleven,PageTwelve,PageThirteen,PageFourteen,
-          PageFifteen,PageSixteen,PageSeventeen,PageEighteen]
+          PageFifteen,PageSixteen,PageSeventeen,PageEighteen,PageNineteen,PageTwenty]
 
 if __name__ == "__main__":
     app = SampleApp()
