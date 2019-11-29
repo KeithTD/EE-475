@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import *
 import time, serial
+import datetime
 from PIL import ImageTk, Image
 import random
 
@@ -14,6 +15,7 @@ ser.open()
 
 #global var for clock
 time1 = ''
+day1 = ''
 #global var for dots
 count = -1
 #global var for RFID type/days to be sent out
@@ -139,6 +141,26 @@ def listRFID(master):
     master.switch_frame(PageNine)
     entry = '4' + user
     ser.write(str.encode(entry))
+
+def writeTheDay(day):
+    today = ''
+    if day == 0:
+        today = "Monday, "
+    if day == 1:
+        today = "Tuesday, "
+    if day == 2:
+        today = "Wednesday, "
+    if day == 3:
+        today = "Thursday, "
+    if day == 4:
+        today = "Friday, "
+    if day == 5:
+        today = "Saturday, "
+    if day == 6:
+        today = "Sunday, "
+    today += str(datetime.datetime.today().month) + "/" + str(datetime.datetime.today().day)
+
+    return today
     
 #Initialize GUI
 class SampleApp(tk.Tk):
@@ -181,6 +203,11 @@ class StartPage(tk.Frame):
         tk.Button(self, text="Debug", font=('Helvetica', 24, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(pageList[11])).place(x=800, y=480, anchor="se")
         
+        global date, day1
+        day1 = datetime.datetime.today().weekday()
+        today = writeTheDay(day1)
+        date = canvas.create_text(400, 125, text=today, anchor="n", fill="white", font=('Helvetica', 36, "bold"))
+
         global clock
         clock = canvas.create_text(400, 0, text=time1, anchor="n", fill='white', font=('Helvetica', 100,"bold"))
 
@@ -192,18 +219,26 @@ class StartPage(tk.Frame):
                 entry = ser.read()
                 entry = entry.decode('utf-8')
                 if entry=='b':
+                    wd = str(datetime.datetime.today().weekday())
+                    ser.write(str.encode(wd))
                     master.switch_frame(PageNine)
                     return
             self.after(500, task)
         def tick():
-            global time1
-            global clock
+            global time1, clock
+            global date, day1
             time2 = time.strftime('%H:%M')
             if time2 != time1:
                 time1 = time2
                 canvas.delete(clock)
                 clock = canvas.create_text(400, 0, text=time2, anchor="n", fill='white', font=('Helvetica', 100,"bold"))
-            self.after(200, tick)
+                day2 = datetime.datetime.today().weekday()
+                if day2 != day1:
+                    day1 = day2
+                    canvas.delete(date)
+                    today = writeTheDay(day2)
+                    date = canvas.create_text(400, 125, text=today, anchor="n", fill="white", font=('Helvetica', 36, "bold"))
+            self.after(1000, tick)
         tick()
         task()
         
@@ -465,7 +500,7 @@ class PageNine(tk.Frame):
         scan = Label(self, font=('Helvetica', 64, 'bold'), fg='red', bg='black')
         scan.place(x=200, y=240, anchor="w")
         tk.Button(self, text="Cancel", font=('Helvetica', 36, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(PageOne)).place(x=0, y=480, anchor="sw")
+                     bg='blue', command=lambda:master.switch_frame(PageNineteen)).place(x=0, y=480, anchor="sw")
 
         while ser.inWaiting():
             ser.read()
@@ -562,12 +597,34 @@ class PageThirteen(tk.Frame):
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
 
-        typePic = ImageTk.PhotoImage(Image.open("textbook.jpg"))
+        while ser.inWaiting() < 4:
+            1
+        item = ser.read(4)
+        item = item.decode('utf-8')
+        print(item)
+
+        message=''
+        file = ''
+        if 'LAP' in item:
+            message = "Laptop#"
+            file = "/home/pi/run/laptop.jpg"
+        if 'BAG' in item:
+            message = "Bag#"
+            file = "/home/pi/run/bag.jpg"
+        if 'NOT' in item:
+            message = "Notebook#"
+            file = "/home/pi/run/notebook.jpg"
+        if 'TXT' in item:
+            message = "Textbook#"
+            file = "/home/pi/run/textbook.jpg"
+        message += item[-1:]
+        
+        typePic = ImageTk.PhotoImage(Image.open(file))
         panel = Label(self, image=typePic)
         panel.image = typePic
         panel.place(x=250, y=300, anchor="c")
 
-        tk.Label(self, text="Textbook#2", fg='black', bg='white',
+        tk.Label(self, text=message, fg='black', bg='white',
                  font=('Helvetica', 36, "bold")).place(x=325, y=300, anchor="w")
         
         self.after(10000, master.switch_frame, StartPage)
