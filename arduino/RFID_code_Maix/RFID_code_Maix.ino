@@ -27,10 +27,10 @@ void setup() {
   pinMode(BUZZER2, OUTPUT);
   digitalWrite(BUZZER2, LOW); //Pull half the buzzer to ground and drive the other half.
 
-  txtCount = 0;
-  notCount = 0;
-  lapCount = 0;
-  bagCount = 0;
+  txtCount = 1;
+  notCount = 1;
+  lapCount = 1;
+  bagCount = 1;
   archiveCount = 0;
   
   if (setupNano(38400) == false) //Configure nano to run at 38400bps
@@ -45,7 +45,7 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("Ready");
+  //Serial.println("Ready");
   while (!Serial.available()); //Wait for user to send a character
   entry = Serial.read();
 
@@ -62,7 +62,8 @@ void loop() {
     checkArchive();
   }
   else {
-    Serial.println("Please use a valid command.");
+    //Serial.println("Please use a valid command.");
+    Serial.println(entry);
   }
 }
 
@@ -144,29 +145,45 @@ void modRFID() {
     byte myEPC[12]; //Most EPCs are 12 bytes
     byte myEPClength;
     byte responseType = 0;
-    while (responseType != RESPONSE_SUCCESS) {
+    long duration = millis();
+    while (responseType != RESPONSE_SUCCESS && (millis() - duration < 5000)) {
       myEPClength = sizeof(myEPC); //Length of EPC is modified each time .readTagEPC is called
       responseType = nano.readTagEPC(myEPC, myEPClength, 500); //Scan for a new tag up to 500ms
     }
-    writeRFID(writeEPC);
-    
-    for (int i = 0; i < archiveCount; i++) {
-      for (int j = 0; j < 12; j++) {
-        if (archive[i][j] != myEPC[j]) {
-          break;
+    if (responseType != RESPONSE_SUCCESS) {
+      Serial.write("18");
+    }
+    else {
+      //writeRFID(writeEPC);
+      byte responseType = nano.writeTagEPC(writeEPC, 12);
+  
+      if (responseType == RESPONSE_SUCCESS) {
+        Serial.write("13");
+        delay(100);
+        for (int i = 0; i < 3; i++) {
+          Serial.write(myEPC[i]);
         }
-        if (j == 11) {
-          for (int k = i; k < archiveCount - 1; k++) {
-            for (int l = 0; l < 12; l++) {
-              archive[k][l] = archive[k + 1][l];
+        int next = (int)myEPC[3];
+        Serial.write(char(next+48));
+        for (int i = 0; i < archiveCount; i++) {
+          for (int j = 0; j < 12; j++) {
+            if (archive[i][j] != myEPC[j]) {
+              break;
+            }
+            if (j == 11) {
+              for (int k = i; k < archiveCount - 1; k++) {
+                for (int l = 0; l < 12; l++) {
+                  archive[k][l] = archive[k + 1][l];
+                }
+              }
+              archiveCount--;
             }
           }
-          archiveCount--;
         }
       }
-    }
-
-    
+      else
+        Serial.write("18");
+    }  
   } 
   else {
     Serial.println("WRONG");
@@ -367,9 +384,9 @@ void writeRFID(char entry[]) {
   byte responseType = nano.writeTagEPC(entry, 12);
   
   if (responseType == RESPONSE_SUCCESS)
-    Serial.println("New EPC Written!");
+    Serial.write("13");
   else
-    Serial.println("Failed write");
+    Serial.write("18");
 }
 
 void checkArchive() {
