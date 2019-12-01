@@ -3,11 +3,9 @@
 import tkinter as tk
 from tkinter import *
 import time, serial
-import datetime
+import datetime, random, requests, googlemaps
 from PIL import ImageTk, Image
-import random
 
-#BOO
 random.seed()
 ser = serial.Serial('/dev/ttyS0', 115200, timeout=1)
 ser.close()
@@ -18,14 +16,16 @@ time1 = ''
 day1 = ''
 #global var for dots
 count = -1
-#global var for RFID type/days to be sent out
+#global var for RFID type/days and user to be sent out
 addType=''
 addDays=list('mtwrfsn')
 scanDay=''
 user=''
-
-#def clicked(str1):
-#    ser.write(str.encode(str1))
+#API key to call on google maps for traffic
+apiKey=''
+with open('/home/pi/key.txt', 'r') as file:
+    apiKey = file.read().replace('\n', '')
+    
 
 def oneSelect(btn, btn1, btn2, btn3, day):
     global addType
@@ -201,7 +201,7 @@ class StartPage(tk.Frame):
         btn.place(x=400, y=480, anchor="s")
 
         tk.Button(self, text="Debug", font=('Helvetica', 24, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(pageList[11])).place(x=800, y=480, anchor="se")
+                     bg='blue', command=lambda:master.switch_frame(pageList[10])).place(x=800, y=480, anchor="se")
         
         global date, day1
         day1 = datetime.datetime.today().weekday()
@@ -284,7 +284,7 @@ class PageTwo(tk.Frame):
         addDays=list('mtwrfsn')
         addType=''
         
-        tk.Label(self, text="Add RFID?", fg='red', bg='black', font=('Helvetica', 36,
+        tk.Label(self, text="Add RFID - Select Type:", fg='red', bg='black', font=('Helvetica', 36,
                                                                  "bold", "underline")).place(x=400, y=15, anchor="n")
         btn1 = tk.Button(self, text="Textbook", font=('Helvetica', 30, "bold"), activebackground='red',
                      bg='red', command=lambda:oneSelect(btn1, btn2, btn3, btn4, 't'))
@@ -300,7 +300,7 @@ class PageTwo(tk.Frame):
         btn4.place(x=700, y=160, anchor="s")
 
         tk.Label(self, text="Which days?", fg='red', bg='black', font=('Helvetica', 36,
-                                                                       "bold")).place(x=400, y=220, anchor="s")        
+                                                                       "bold")).place(x=400, y=230, anchor="s")        
         btn5 = tk.Button(self, text="Mon", font=('Helvetica', 30, "bold"), activebackground='red',
                      bg='red', command=lambda:allSelect(btn5, 0))
         btn5.place(x=90, y=300, anchor="s")
@@ -390,7 +390,7 @@ class PageFour(tk.Frame):
         btn13.place(x=800, y=480, anchor="se")
         self.after(60000, master.switch_frame, StartPage)
 
-#Delete RFID Confirm Page
+#Delete RFID Instruction Page
 class PageFive(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
@@ -451,7 +451,7 @@ class PageSix(tk.Frame):
                      bg='green', command=lambda:master.switch_frame(PageSeven)).place(x=800, y=480, anchor="se")
         self.after(60000, master.switch_frame, StartPage)
         
-#Modify RFID Confirm page
+#Modify RFID Instruction page
 class PageSeven(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
@@ -470,7 +470,7 @@ class PageSeven(tk.Frame):
                      bg='green', command=lambda:modRFID(master)).place(x=800, y=480, anchor="se")
         self.after(60000, master.switch_frame, StartPage)
 
-#Add RFID Confirm Page
+#Add RFID Instruction Page
 class PageEight(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
@@ -535,6 +535,8 @@ class PageTen(tk.Frame):
                  font=('Helvetica', 100, "bold")).place(x=400, y=240, anchor="c")
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
+        tk.Button(self, text="Check Traffic", font=('Helvetica', 48, "bold"), activebackground='blue',
+                     bg='blue', command=lambda:master.switch_frame(PageTwentyOne)).place(x=800, y=480, anchor="se")
 
         self.after(10000, master.switch_frame, StartPage)
 
@@ -547,17 +549,59 @@ class PageEleven(tk.Frame):
         tk.Label(self, text="RFID Added!", fg='white', bg='green',
                  font=('Helvetica', 64, "bold")).place(x=400, y=10, anchor="n")
         tk.Label(self, text="Your new item is:", fg='white', bg='green',
-                 font=('Helvetica', 36, "bold")).place(x=400, y=150, anchor="n")
+                 font=('Helvetica', 36, "bold")).place(x=400, y=155, anchor="n")
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
 
-        typePic = ImageTk.PhotoImage(Image.open("textbook.jpg"))
+        #while ser.inWaiting() < 12:
+        #    1
+        #item = ser.read(12)
+        #item = item.decode('utf-8')
+        item='LAP3KMTwRFSN'
+
+        message=''
+        file='/home/pi/run/'
+        days='For days:'
+
+        if 'LAP' in item:
+            message = "Laptop#"
+            file += "laptop.jpg"
+        if 'BAG' in item:
+            message = "Bag#"
+            file += "bag.jpg"
+        if 'NOT' in item:
+            message = "Notebook#"
+            file += "notebook.jpg"
+        if 'TXT' in item:
+            message = "Textbook#"
+            file += "textbook.jpg"
+        message += item[3]
+
+        if 'M' in item:
+            days += " Mon"
+        if 'T' in item:
+            days += " Tue"
+        if 'W' in item:
+            days += " Wed"
+        if 'R' in item:
+            days += " Thu"
+        if 'F' in item:
+            days += " Fri"
+        if 'S' in item:
+            days += " Sat"
+        if 'N' in item:
+            days += " Sun" 
+
+        typePic = ImageTk.PhotoImage(Image.open(file))
         panel = Label(self, image=typePic)
         panel.image = typePic
-        panel.place(x=250, y=300, anchor="c")
+        panel.place(x=250, y=275, anchor="c")
 
-        tk.Label(self, text="Textbook#2", fg='white', bg='green',
-                 font=('Helvetica', 36, "bold")).place(x=325, y=300, anchor="w")
+        tk.Label(self, text=message, fg='white', bg='green',
+                 font=('Helvetica', 40, "bold")).place(x=310, y=275, anchor="w")
+        tk.Label(self, text=days, fg='white', bg='green',
+                 font=('Helvetica', 28, "bold")).place(x=400, y=350, anchor="c")
+        
         
         self.after(10000, master.switch_frame, StartPage)
 
@@ -569,18 +613,58 @@ class PageTwelve(tk.Frame):
         
         tk.Label(self, text="RFID Modded!", fg='white', bg='green',
                  font=('Helvetica', 64, "bold")).place(x=400, y=10, anchor="n")
-        tk.Label(self, text="New days: M, T, W, R, F, S, N", fg='white', bg='green',
-                 font=('Helvetica', 36, "bold")).place(x=400, y=150, anchor="n")
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
 
-        typePic = ImageTk.PhotoImage(Image.open("textbook.jpg"))
+        #while ser.inWaiting() < 12:
+        #    1
+        #item = ser.read(12)
+        #item = item.decode('utf-8')
+        item='BAG3KMTWRFSN'
+
+        message=''
+        file='/home/pi/run/'
+        days='New days:'
+
+        if 'LAP' in item:
+            message = "Laptop#"
+            file += "laptop.jpg"
+        if 'BAG' in item:
+            message = "Bag#"
+            file += "bag.jpg"
+        if 'NOT' in item:
+            message = "Notebook#"
+            file += "notebook.jpg"
+        if 'TXT' in item:
+            message = "Textbook#"
+            file += "textbook.jpg"
+        message += item[3]
+
+        if 'M' in item:
+            days += " Mon"
+        if 'T' in item:
+            days += " Tue"
+        if 'W' in item:
+            days += " Wed"
+        if 'R' in item:
+            days += " Thu"
+        if 'F' in item:
+            days += " Fri"
+        if 'S' in item:
+            days += " Sat"
+        if 'N' in item:
+            days += " Sun" 
+
+        
+        typePic = ImageTk.PhotoImage(Image.open(file))
         panel = Label(self, image=typePic)
         panel.image = typePic
-        panel.place(x=250, y=300, anchor="c")
+        panel.place(x=200, y=225, anchor="w")
 
-        tk.Label(self, text="Textbook#2", fg='white', bg='green',
-                 font=('Helvetica', 36, "bold")).place(x=325, y=300, anchor="w")
+        tk.Label(self, text=days, fg='white', bg='green',
+                 font=('Helvetica', 28, "bold")).place(x=400, y=300, anchor="n")
+        tk.Label(self, text=message, fg='white', bg='green',
+                 font=('Helvetica', 48, "bold")).place(x=325, y=225, anchor="w")
         
         self.after(10000, master.switch_frame, StartPage)
 
@@ -661,13 +745,39 @@ class PageFifteen(tk.Frame):
                  font=('Helvetica',36, "bold"))
         wait.place(x=400, y=0, anchor="n")
 
-        rfidTypeList = ["/home/pi/run/notebook.jpg", "/home/pi/run/textbook.jpg", "/home/pi/run/bag.jpg", "/home/pi/run/laptop.jpg"]
-        for i in range(8):
-            typeName = rfidTypeList[i%4]
-            typePic = ImageTk.PhotoImage(Image.open(typeName))
+        #while ser.inWaiting():
+        #    1
+        #numb = ser.read()
+        #numb = ord(numb)
+        numb = 6
+        
+        for i in range(numb):
+            #while.ser.inWaiting() < 4:
+            #    1
+            #item = ser.read(12)
+            #item = entry.decode
+            item='NOT6'
+            message=''
+            file='/home/pi/run/'
+            
+            if 'LAP' in item:
+                message = "Laptop#"
+                file += "laptop.jpg"
+            if 'BAG' in item:
+                message = "Bag#"
+                file += "bag.jpg"
+            if 'NOT' in item:
+                message = "Notebook#"
+                file += "notebook.jpg"
+            if 'TXT' in item:
+                message = "Textbook#"
+                file += "textbook.jpg"
+            message += item[3]
+
+            typePic = ImageTk.PhotoImage(Image.open(file))
             panel = Label(self, image=typePic)
             panel.image = typePic
-            label = tk.Label(self, text="Textbook#8", fg='red', bg='white',
+            label = tk.Label(self, text=message, fg='red', bg='white',
                  font=('Helvetica', 24, "bold"))
             if i%2==0:
                 panel.place(x=0, y=(50 + 100*i/2), anchor="nw")
@@ -679,7 +789,7 @@ class PageFifteen(tk.Frame):
         tk.Button(self, text="OK", font=('Helvetica', 64, "bold"), activebackground='green',
                      bg='green', command=lambda:master.switch_frame(StartPage)).place(x=800, y=480, anchor="se")
 
-        self.after(10000, master.switch_frame, StartPage)
+        self.after(20000, master.switch_frame, StartPage)
 
 #RFID Added Fail Page
 class PageSixteen(tk.Frame):
@@ -766,20 +876,73 @@ class PageTwenty(tk.Frame):
         tk.Frame.__init__(self, master)
         tk.Frame.configure(self,bg='black')
 
-        wait = tk.Label(self, text="List for Keith:", fg='red', bg='black',
+        global user
+        greeting = "List for "
+        if user == 'g':
+            greeting+="Gavin:"
+        if user == 'j':
+            greeting+="John:"
+        if user == 'k':
+            greeting+="Keith:"
+        if user == 'r':
+            greeting+="Rei:"
+            
+        wait = tk.Label(self, text=greeting, fg='red', bg='black',
                  font=('Helvetica',36, "bold"))
         wait.place(x=400, y=0, anchor="n")
+        
+        #while ser.inWaiting():
+        #    1
+        #numb = ser.read()
+        #numb = ord(numb)
+        numb = 6
+        for i in range(numb):
+            #while.ser.inWaiting() < 12:
+            #    1
+            #item = ser.read(12)
+            #item = entry.decode
+            item='NOT6KMtwRfsN'
+            message=''
+            file='/home/pi/run/'
+            days=''
 
-        rfidTypeList = ["/home/pi/run/notebook.jpg", "/home/pi/run/textbook.jpg", "/home/pi/run/bag.jpg", "/home/pi/run/laptop.jpg"]
-        for i in range(8):
-            typeName = rfidTypeList[i%4]
-            typePic = ImageTk.PhotoImage(Image.open(typeName))
+            if 'LAP' in item:
+                message = "Laptop#"
+                file += "laptop.jpg"
+            if 'BAG' in item:
+                message = "Bag#"
+                file += "bag.jpg"
+            if 'NOT' in item:
+                message = "Notebook#"
+                file += "notebook.jpg"
+            if 'TXT' in item:
+                message = "Textbook#"
+                file += "textbook.jpg"
+            message += item[3]
+
+            if 'M' in item:
+                days += "M "
+            if 'T' in item:
+                days += "T "
+            if 'W' in item:
+                days += "W "
+            if 'R' in item:
+                days += "R "
+            if 'F' in item:
+                days += "F "
+            if 'S' in item:
+                days += "S "
+            if 'N' in item:
+                days += "N" 
+
+            typePic = ImageTk.PhotoImage(Image.open(file))
             panel = Label(self, image=typePic)
             panel.image = typePic
-            label = tk.Label(self, text="Textbook#8", fg='red', bg='black',
+            label = tk.Label(self, text=message, fg='red', bg='black',
                  font=('Helvetica', 24, "bold"))
-            label1 = tk.Label(self, text="M,T,W,R,F,S,N", fg='red', bg='black',
+            label1 = tk.Label(self, text=days, fg='red', bg='black',
                  font=('Helvetica', 20, "bold"))
+
             if i%2==0:
                 panel.place(x=0, y=(50 + 100*i/2), anchor="nw")
                 label.place(x=110, y=(75 + 100*i/2), anchor="w")
@@ -792,11 +955,72 @@ class PageTwenty(tk.Frame):
         tk.Button(self, text="OK", font=('Helvetica', 64, "bold"), activebackground='green',
                      bg='green', command=lambda:master.switch_frame(StartPage)).place(x=800, y=480, anchor="se")
 
-        self.after(10000, master.switch_frame, StartPage)
+        self.after(20000, master.switch_frame, StartPage)
 
+#Traffic Screen
+class PageTwentyOne(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        tk.Frame.configure(self,bg='black')
+
+        global apiKey
+        gmaps = googlemaps.Client(key=apiKey)
+        
+        origin = "8001 25th St W, University Place, WA"
+        destination = "Tacoma Dome Station, Tacoma, WA"
+        user1='r'
+        if user1 == 'g':
+            origin = "927 17th Ave, Seattle, WA"
+            destination = "6750 S 228th St, Kent, WA"
+        if user1 == 'j':
+            origin = "3520 SW Genesee St, Seattle, WA"
+            destination = "1417 12th Ave, Seattle, WA"
+        if user1 == 'k':
+            origin = "8001 25th St W, University Place, WA"
+            destination = "Tacoma Dome Station, Tacoma, WA"
+        if user1 == 'r':
+            origin = "153 N 78th St, Seattle, WA"
+            destination = "Sieg Hall, Seattle, WA"
+
+        now = datetime.datetime.now()
+        directions_result = gmaps.directions(origin, destination, mode="driving", departure_time=now)
+
+        path = directions_result[0].get('overview_polyline').get('points')
+        summary = directions_result[0].get('summary')
+        duration = directions_result[0].get('legs')[0].get('duration').get('text')
+                
+        url = "https://maps.googleapis.com/maps/api/staticmap?"
+        size = "size=480x480"
+        pathURL = "&path=weight:3%7Ccolor:blue%7Cenc:"
+        r = requests.get(url + size + pathURL + path + "&key=" + apiKey) 
+        f = open('/home/pi/run/map.jpg', 'wb')
+        f.write(r.content)
+        f.close()
+
+        tk.Label(self, text="Traffic Summary", fg='red', bg='black',
+                 font=('Helvetica', 24, "bold", "underline")).place(x=160, y=0, anchor="n")
+        tk.Label(self, text="Take", fg='red', bg='black',
+                 font=('Helvetica', 36, "bold")).place(x=160, y=100, anchor="n")
+        tk.Label(self, text=summary, fg='red', bg='black',
+                 font=('Helvetica', 36, "bold")).place(x=160, y=150, anchor="n")
+        tk.Label(self, text="Travel Time:", fg='red', bg='black',
+                 font=('Helvetica', 36, "bold")).place(x=160, y=250, anchor="n")
+        tk.Label(self, text=duration, fg='red', bg='black',
+                 font=('Helvetica', 36, "bold")).place(x=160, y=300, anchor="n")
+        tk.Button(self, text="Done", font=('Helvetica', 36, "bold"), activebackground='blue',
+                     bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
+
+        typePic = ImageTk.PhotoImage(Image.open('/home/pi/run/map.jpg'))
+        panel = Label(self, image=typePic)
+        panel.image = typePic
+        panel.place(x=800, y=0, anchor="ne")
+
+        self.after(20000, master.switch_frame, StartPage)
+        
+        
 pageList=[StartPage,PageOne,PageTwo,PageThree,PageFour,PageFive,PageSix,PageSeven,
           PageEight,PageNine,PageTen,PageEleven,PageTwelve,PageThirteen,PageFourteen,
-          PageFifteen,PageSixteen,PageSeventeen,PageEighteen,PageNineteen,PageTwenty]
+          PageFifteen,PageSixteen,PageSeventeen,PageEighteen,PageNineteen,PageTwenty, PageTwentyOne]
 
 if __name__ == "__main__":
     app = SampleApp()
