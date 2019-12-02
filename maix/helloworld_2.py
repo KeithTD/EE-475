@@ -23,19 +23,19 @@ uart1 = UART(UART.UART1, 115200,8,0,0, timeout=1000, read_buf_len=4096)
 uart2 = UART(UART.UART2, 115200,8,0,0, timeout=1000, read_buf_len=4096)
 
 
-sensor.reset()                      # Reset and initialize the sensor. It will
-                                    # run automatically, call sensor.run(0) to stop
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
-sensor.skip_frames(time = 2000)     # Wait for settings take effect.
-clock = time.clock()                # Create a clock object to track the FPS.
+sensor.reset()
+
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.QVGA)
+sensor.skip_frames(time = 2000)
+clock = time.clock()
 tim1 = time.ticks_ms()
 tim2 = time.ticks_ms()
 
 while(True):
-    clock.tick()                    # Update the FPS clock.
-    img = sensor.snapshot()         # Take a picture and return the image.
-    lcd.display(img)                # Display on LCD
+    clock.tick()
+    img = sensor.snapshot()
+    lcd.display(img)
 
     #if (time.ticks_diff(time.ticks_ms(), tim1)>5000):
     #    uart1.write("b")#(bytes([17]))
@@ -49,19 +49,69 @@ while(True):
         entry = entry.decode('utf-8')
         if entry == "3dd":
             uart2.write(entry)
-        print(entry)                # Note: MaixPy's Cam runs about half as fast when connected
-                                    # to the IDE. The FPS should increase once disconnected.
+        else:
+            uart2.write(entry)
+        print(entry)
+
     if uart2.any():
         entry1 = uart2.read()
         entry1 = entry1.decode('utf-8')
+        print("entry1:")
         print(entry1)
+        if entry1 == "10":
+            uart1.write(bytes([10]))
+        if entry1 == "11":
+            uart1.write(bytes([11]))
+            while uart2.any() < 12:
+                1
+            entry2 = uart2.read()
+            entry2 = entry2.decode('utf-8')
+            print("entry2(11):")
+            print(entry2)
+            uart1.write(entry2)
+        if entry1 == "12":
+            uart1.write(bytes([12]))
+            while uart2.any() < 12:
+                1
+            entry2 = uart2.read()
+            entry2 = entry2.decode('utf-8')
+            print("entry2(12):")
+            print(entry2)
+            uart1.write(entry2)
         if entry1 == "13":
             uart1.write(bytes([13]))
             while uart2.any() < 4:
                 1
             entry2 = uart2.read()
             entry2 = entry2.decode('utf-8')
+            print("entry2(13):")
             print(entry2)
             uart1.write(entry2)
+        if entry1 == "14":
+            uart1.write(bytes([14]))
+        if entry1 == "16":
+            uart1.write(bytes([16]))
+        if entry1 == "17":
+            uart1.write(bytes([17]))
         if entry1 == "18":
             uart1.write(bytes([18]))
+        if entry1 == "20":
+            uart1.write(bytes([20]))
+            while uart2.any() == 0:
+                1
+            entry2 = uart2.read(1)
+            entry2 = entry2.decode('utf-8')
+            print("entry2(20):")
+            print(entry2)
+            uart1.write(entry2)
+
+            if int(entry2) > 0:
+                while uart2.any() < int(entry2)*12:
+                    1
+                entry3 = uart2.read()
+                entry3 = entry3.decode('utf-8')
+                print("entry3(20):")
+                print(entry3)
+                uart1.write(entry3)
+
+
