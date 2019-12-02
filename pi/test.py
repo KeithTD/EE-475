@@ -202,7 +202,7 @@ class StartPage(tk.Frame):
         btn.place(x=400, y=480, anchor="s")
 
         tk.Button(self, text="Debug", font=('Helvetica', 24, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(pageList[10])).place(x=800, y=480, anchor="se")
+                     bg='blue', command=lambda:master.switch_frame(pageList[21])).place(x=800, y=480, anchor="se")
         
         global date, day1
         day1 = datetime.datetime.today().weekday()
@@ -221,7 +221,7 @@ class StartPage(tk.Frame):
                 entry = entry.decode('utf-8')
                 if entry=='b':
                     wd = str(datetime.datetime.today().weekday())
-                    ser.write(str.encode(wd))
+                    ser.write(str.encode('x' + wd))
                     master.switch_frame(PageNine)
                     return
             self.after(500, task)
@@ -747,18 +747,19 @@ class PageFifteen(tk.Frame):
                  font=('Helvetica',36, "bold"))
         wait.place(x=400, y=0, anchor="n")
 
-        #while ser.inWaiting():
-        #    1
-        #numb = ser.read()
-        #numb = ord(numb)
-        numb = 6
+        while ser.inWaiting() == 0:
+            1
+        numb = ser.read(1)
+        numb = numb.decode('utf-8')
+        print(numb)
+        #numb = 6
         
-        for i in range(numb):
-            #while.ser.inWaiting() < 4:
-            #    1
-            #item = ser.read(12)
-            #item = entry.decode
-            item='NOT6'
+        for i in range(int(numb)):
+            while ser.inWaiting() < 4:
+                1
+            item = ser.read(4)
+            item = item.decode('utf-8')
+            #item='NOT6'
             message=''
             file='/home/pi/run/'
             
@@ -971,7 +972,7 @@ class PageTwentyOne(tk.Frame):
         
         origin = "8001 25th St W, University Place, WA"
         destination = "Tacoma Dome Station, Tacoma, WA"
-        user1='r'
+        user1='j'
         if user1 == 'g':
             origin = "927 17th Ave, Seattle, WA"
             destination = "6750 S 228th St, Kent, WA"
@@ -1005,7 +1006,7 @@ class PageTwentyOne(tk.Frame):
         tk.Label(self, text="Take", fg='red', bg='black',
                  font=('Helvetica', 36, "bold")).place(x=160, y=100, anchor="n")
         tk.Label(self, text=summary, fg='red', bg='black',
-                 font=('Helvetica', 36, "bold")).place(x=160, y=150, anchor="n")
+                 font=('Helvetica', int(400/len(summary)), "bold")).place(x=160, y=150, anchor="n")
         tk.Label(self, text="Travel Time:", fg='red', bg='black',
                  font=('Helvetica', 36, "bold")).place(x=160, y=250, anchor="n")
         tk.Label(self, text=duration, fg='red', bg='black',
