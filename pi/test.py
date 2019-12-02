@@ -118,6 +118,7 @@ def addRFID(master):
         if addDays[i].isupper():
             entry += addDays[i]
     entry += addType
+    entry += user
     entry += 'd'
     
     ser.write(str.encode(entry))
@@ -134,7 +135,7 @@ def modRFID(master):
 
 def scanRFID(master):
     master.switch_frame(PageNine)
-    entry = '1' + scanDay
+    entry = '1' + scanDay + user
     ser.write(str.encode(entry))
 
 def listRFID(master):
@@ -533,10 +534,10 @@ class PageTen(tk.Frame):
         
         tk.Label(self, text="Good to go!", fg='white', bg='green',
                  font=('Helvetica', 100, "bold")).place(x=400, y=240, anchor="c")
-        tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
+        tk.Button(self, text="Back", font=('Helvetica', 48, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
-        tk.Button(self, text="Check Traffic", font=('Helvetica', 48, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(PageTwentyOne)).place(x=800, y=480, anchor="se")
+        tk.Button(self, text="Check Traffic", font=('Helvetica', 48, "bold"), activebackground='red',
+                     bg='red', command=lambda:master.switch_frame(PageTwentyOne)).place(x=800, y=480, anchor="se")
 
         self.after(10000, master.switch_frame, StartPage)
 
@@ -553,12 +554,12 @@ class PageEleven(tk.Frame):
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
 
-        #while ser.inWaiting() < 12:
-        #    1
-        #item = ser.read(12)
-        #item = item.decode('utf-8')
-        item='LAP3KMTwRFSN'
-
+        while ser.inWaiting() < 12:
+            1
+        item = ser.read(12)
+        item = item.decode('utf-8')
+        print(item)
+        
         message=''
         file='/home/pi/run/'
         days='For days:'
@@ -577,19 +578,19 @@ class PageEleven(tk.Frame):
             file += "textbook.jpg"
         message += item[3]
 
-        if 'M' in item:
+        if 'M' in item[5]:
             days += " Mon"
-        if 'T' in item:
+        if 'T' in item[6]:
             days += " Tue"
-        if 'W' in item:
+        if 'W' in item[7]:
             days += " Wed"
-        if 'R' in item:
+        if 'R' in item[8]:
             days += " Thu"
-        if 'F' in item:
+        if 'F' in item[9]:
             days += " Fri"
-        if 'S' in item:
+        if 'S' in item[10]:
             days += " Sat"
-        if 'N' in item:
+        if 'N' in item[11]:
             days += " Sun" 
 
         typePic = ImageTk.PhotoImage(Image.open(file))
@@ -616,11 +617,12 @@ class PageTwelve(tk.Frame):
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
 
-        #while ser.inWaiting() < 12:
-        #    1
-        #item = ser.read(12)
-        #item = item.decode('utf-8')
-        item='BAG3KMTWRFSN'
+        while ser.inWaiting() < 12:
+            1
+        item = ser.read(12)
+        item = item.decode('utf-8')
+        print(item)
+        #item='BAG3KMTWRFSN'
 
         message=''
         file='/home/pi/run/'
@@ -640,19 +642,19 @@ class PageTwelve(tk.Frame):
             file += "textbook.jpg"
         message += item[3]
 
-        if 'M' in item:
+        if 'M' in item[5]:
             days += " Mon"
-        if 'T' in item:
+        if 'T' in item[6]:
             days += " Tue"
-        if 'W' in item:
+        if 'W' in item[7]:
             days += " Wed"
-        if 'R' in item:
+        if 'R' in item[8]:
             days += " Thu"
-        if 'F' in item:
+        if 'F' in item[9]:
             days += " Fri"
-        if 'S' in item:
+        if 'S' in item[10]:
             days += " Sat"
-        if 'N' in item:
+        if 'N' in item[11]:
             days += " Sun" 
 
         
@@ -868,7 +870,7 @@ class PageNineteen(tk.Frame):
         #btn13 = tk.Button(self, text="OK", font=('Helvetica', 50, "bold"), activebackground='green',
         #             bg='green', command=lambda:master.switch_frame(PageOne))
         #btn13.place(x=800, y=480, anchor="se")
-        self.after(10000, master.switch_frame, StartPage)
+        self.after(60000, master.switch_frame, StartPage)
 
 #RFID List Screen
 class PageTwenty(tk.Frame):
@@ -891,17 +893,18 @@ class PageTwenty(tk.Frame):
                  font=('Helvetica',36, "bold"))
         wait.place(x=400, y=0, anchor="n")
         
-        #while ser.inWaiting():
-        #    1
-        #numb = ser.read()
-        #numb = ord(numb)
-        numb = 6
-        for i in range(numb):
-            #while.ser.inWaiting() < 12:
-            #    1
-            #item = ser.read(12)
-            #item = entry.decode
-            item='NOT6KMtwRfsN'
+        while ser.inWaiting() == 0:
+            1
+        numb = ser.read(1)
+        numb = numb.decode('utf-8')
+        print(numb)
+        
+        for i in range(int(numb)):
+            while ser.inWaiting() < 12:
+                1
+            item = ser.read(12)
+            item = item.decode('utf-8')
+            #item='NOT6KMtwRfsN'
             message=''
             file='/home/pi/run/'
             days=''
@@ -920,20 +923,20 @@ class PageTwenty(tk.Frame):
                 file += "textbook.jpg"
             message += item[3]
 
-            if 'M' in item:
-                days += "M "
-            if 'T' in item:
-                days += "T "
-            if 'W' in item:
-                days += "W "
-            if 'R' in item:
-                days += "R "
-            if 'F' in item:
-                days += "F "
-            if 'S' in item:
-                days += "S "
-            if 'N' in item:
-                days += "N" 
+            if 'M' in item[5]:
+                days += " Mon"
+            if 'T' in item[6]:
+                days += " Tue"
+            if 'W' in item[7]:
+                days += " Wed"
+            if 'R' in item[8]:
+                days += " Thu"
+            if 'F' in item[9]:
+                days += " Fri"
+            if 'S' in item[10]:
+                days += " Sat"
+            if 'N' in item[11]:
+                days += " Sun" 
 
             typePic = ImageTk.PhotoImage(Image.open(file))
             panel = Label(self, image=typePic)
@@ -1015,7 +1018,7 @@ class PageTwentyOne(tk.Frame):
         panel.image = typePic
         panel.place(x=800, y=0, anchor="ne")
 
-        self.after(20000, master.switch_frame, StartPage)
+        self.after(60000, master.switch_frame, StartPage)
         
         
 pageList=[StartPage,PageOne,PageTwo,PageThree,PageFour,PageFive,PageSix,PageSeven,
