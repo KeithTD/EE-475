@@ -12,8 +12,35 @@ from machine import UART
 from board import board_info
 import KPU as kpu
 
-lcd.init(freq=15000000)
-lcd.rotation(2)
+#lcd.init(freq=15000000)
+#lcd.rotation(2)
+#sensor.reset()
+#sensor.set_pixformat(sensor.RGB565)
+#sensor.set_framesize(sensor.QVGA)
+#sensor.skip_frames(time = 2000)
+
+lcd.init()
+# Reset sensor
+sensor.reset()
+# Sensor settings
+sensor.set_contrast(1)
+sensor.set_gainceiling(16)
+sensor.set_framesize(sensor.QVGA)
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_windowing((128, 128))
+sensor.set_vflip(1)
+sensor.run(1)
+sensor.skip_frames(time = 2000)
+#LCD setup
+lcd.direction(lcd.YX_RLDU)
+lcd.clear()
+lcd.draw_string(100,96,"MobileNet Demo")
+lcd.draw_string(100,112,"Loading labels...")
+labels = ['Eric', 'Peter', 'Lena', 'Ben','Trump']
+#labels = ["daisy", "dandelion", "roses", "sunflowers", "tulips"]
+task = kpu.load("/sd/kmodel/flowers.kmodel")
+clock = time.clock()
+lcd.clear()
 
 fm.register(board_info.PIN9, fm.fpioa.UART1_TX, force=True)
 fm.register(board_info.PIN10, fm.fpioa.UART1_RX, force=True)
@@ -22,23 +49,72 @@ fm.register(board_info.PIN17, fm.fpioa.UART2_RX, force=True)
 uart1 = UART(UART.UART1, 115200,8,0,0, timeout=1000, read_buf_len=4096)
 uart2 = UART(UART.UART2, 115200,8,0,0, timeout=1000, read_buf_len=4096)
 
-
-sensor.reset()
-
-sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
-
 clock = time.clock()
 faceDetect = 0
 checkForDay = 0
 user = 'k'
 tim1 = tim1 = time.ticks_ms()
 
+face_cascade = image.HaarCascade("frontalface", stages=25)
+eyes_cascade = image.HaarCascade("eye", stages=24)
+tim = time.ticks_ms()
+faceDetected = False
+
 while(True):
-    clock.tick()
+    #clock.tick()
+    #img = sensor.snapshot()
+    #lcd.display(img)
+
+    # Capture snapshot
     img = sensor.snapshot()
+
+    objects = img.find_features(face_cascade, threshold=0.5, scale_factor=1.5)
+
+    # drawing on lcd
+    for face in objects:
+        faceDetected = True
+        img.draw_rectangle(face)
+        eyes = img.find_features(eyes_cascade, threshold=0.5, scale_factor=1.2, roi=face)
+        for e in eyes:
+            img.draw_rectangle(e)
     lcd.display(img)
+
+    # face recog
+    if faceDetected:
+        #takes 6.5 sec
+        pmax=0.0
+        for i in range(100):
+            time.sleep(0.01)
+            img2 = sensor.snapshot()
+            clock.tick()
+            fmap = kpu.forward(task, img2)
+            fps=clock.fps()
+            plist=fmap[:]
+            if max(plist) > pmax:
+                pmax=max(plist)
+                max_index=plist.index(pmax)
+            #a = lcd.display(img2, oft=(96,56))
+            #a = lcd.display(img2, oft=(48,0))
+            lcd.display(img2)
+            lcd.draw_string(0, 224, "%.2f:%s                            "%(pmax, labels[max_index].strip()))
+            print("pmax:")
+            print(pmax)
+            print("curr value:")
+            print(max(plist))
+
+        # write to uart
+        if pmax < 0.5:
+            result = "error"
+        else:
+            result = labels[plist.index(max(plist))]
+        print("result:")
+        print(result)
+        #uart_A.write(result)
+        print('Restarting...')
+        time.sleep(5)
+        print('Ready for rescan')
+        faceDetected = False
+
     if faceDetect:
         uart1.write("b")
         faceDetect = 0

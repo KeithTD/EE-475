@@ -119,9 +119,9 @@ void modRFID() {
     for (int i = 0; i < 5; i++) {
       writeEPC[i] = myEPC[i];
     }
-    //writeRFID(writeEPC);
     if (responseType != RESPONSE_SUCCESS) {
       Serial.write("17");
+      alarmSound();
     }
     else {
       Serial.println("Writing to RFID");
@@ -145,9 +145,12 @@ void modRFID() {
         for (int i = 0;i < 12;i++){
           Serial.write(writeEPC[i]);
         }
+        chimeUp();
       }
-      else
+      else {
         Serial.write("17");
+        alarmSound();
+      }
     }
   } 
   else if (entry == 'd') {
@@ -168,9 +171,9 @@ void modRFID() {
     }
     if (responseType != RESPONSE_SUCCESS) {
       Serial.write("18");
+      alarmSound();
     }
     else {
-      //writeRFID(writeEPC);
       byte responseType = nano.writeTagEPC(writeEPC, 12);
   
       if (responseType == RESPONSE_SUCCESS) {
@@ -196,9 +199,12 @@ void modRFID() {
             }
           }
         }
+        chimeUp();
       }
-      else
+      else {
         Serial.write("18");
+        alarmSound();
+      }
     }  
   } 
   else {
@@ -276,7 +282,6 @@ void addRFID() {
   Serial.println("hit key");
   //while (!Serial.available());
   //Serial.read();
-  //writeRFID(writeEPC);
   Serial.println("Writing to RFID");
   
   byte responseType = nano.writeTagEPC(writeEPC, 12);
@@ -293,21 +298,25 @@ void addRFID() {
     for (int i=0; i<12; i++) {
       Serial.write(writeEPC[i]);
     }
+    chimeUp();
   } 
-  else
+  else {
     Serial.write("16");
+    alarmSound();
+  }
 }
 
-/*void checkRFID() {
+void checkRFID() {
   Serial.println("Enter day:");
-  while (Serial.available()<2);
+  while (Serial.available() < 2);
   day = Serial.read();
-  char user = Serial.read();
+  char user = Serial.read(); 
   Serial.println("Begin");
 
   int caughtCount = 0; 
   char epc[12];
   char epcCaught[10][12];
+  char epcMissed[10][4];
   bool match = false;
   int sectMatch = 0;
 
@@ -379,16 +388,14 @@ void addRFID() {
   } else if (day == 'n' || day == 'N') {
     archCheck = 11;
   }
-  Serial.print("archCheck: ");
-  Serial.println(archCheck);
-  Serial.print("user: ");
-  Serial.println(user);
-  Serial.print("archiveCount: ");
-  Serial.println(archiveCount);
+
   int missCount = 0;
   for (int i = 0; i < archiveCount; i++) {
-    if (archive[i][archCheck] >= 65 && archive[i][archCheck] <= 90) { //&& archive[i][4] == user) {
+    if (archive[i][archCheck] >= 65 && archive[i][archCheck] <= 90 && archive[i][4] == user) {
       bool archMatch = false;
+      if (caughtCount == 0) {
+        caughtCount++;
+      }
       for (int j = 0; j < caughtCount; j++) {
         for (int k = 0; k < 12; k++) {
           if (archive[i][k] != epcCaught[j][k]) {
@@ -400,150 +407,37 @@ void addRFID() {
         }
         if (j == caughtCount - 1) {
           if (archMatch) {
-            Serial.print("Match: ");
+            //Serial.print("Match: ");
           } else {
-            Serial.print("Missing: ");
+            //Serial.print("Missing: ");
+            for (int l = 0; l < 4; l++) {
+              epcMissed[missCount][l] = archive[i][l];
+            }
             missCount++;
           }
           for (int k = 0; k < 4; k++) {
-            Serial.print(archive[i][k]);
+            //Serial.print(archive[i][k]);
           }
+          //Serial.println();
         }
       }
     }
   }
+  
   if (missCount == 0) {
-    Serial.write("10");
+    Serial.write("10"); 
+    walkingOnSunshine();
   } else {
     Serial.write("14");
-  }
-  //Serial.println("End");  
-}*/
-
-void checkRFID() {
-  Serial.println("Enter day:");
-  while (!Serial.available());
-  day = Serial.read(); 
-  Serial.println("Begin");
-
-  int caughtCount = 1; 
-  char epc[12];
-  char epcCaught[10][12];
-  bool match = false;
-  int sectMatch = 0;
-
-  for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < 12; j++) {
-      epcCaught[i][j] = 0;
-    }
-  }
-  
-  nano.startReading();
-  timer = millis();
-  
-  while (millis() - timer < 10000) {
-    if (nano.check() == true) //Check to see if any new data has come in from module
-    {
-      byte responseType = nano.parseResponse(); //Break response into tag ID, RSSI, frequency, and timestamp
-      if (responseType == RESPONSE_IS_KEEPALIVE){
-      } 
-      else if (responseType == RESPONSE_IS_TAGFOUND) {
-        byte tagEPCBytes = nano.getTagEPCBytes(); //Get the number of bytes of EPC from response
-        for (byte x = 0 ; x < tagEPCBytes ; x++) {
-          epc[x] = (char)nano.msg[31 + x];
-        }
-
-        for (int i = 0; i < 10; i++) {
-          for (int j = 0; j < 12; j++) {
-            if (epcCaught[i][j] == epc[j]) {
-              sectMatch++;
-            }
-            if (j == 11 && sectMatch == 12) {
-              match = true;
-            }
-          }
-          sectMatch = 0;
-          if (i == 9 && !match) {
-            for (int k = 0; k < 12; k++) {
-              epcCaught[caughtCount][k] = epc[k];
-              if (k == 3) {
-                Serial.print((int)epc[k]);
-              }
-              else
-                Serial.print(epc[k]);
-            }
-            caughtCount++;
-            Serial.println();
-          }
-        }
-        match = false;
-      }
-      else if (responseType == ERROR_CORRUPT_RESPONSE) {
-        Serial.println("Bad CRC");
-      } else {
-        Serial.print("Unknown error");
+    delay(500);
+    Serial.write((char)missCount+48);
+    for (int i = 0; i < missCount; i++) {
+      for (int j = 0; j < 4; j++) {
+        Serial.write(epcMissed[i][j]);
       }
     }
+    alarmSound();
   }
-
-  nano.stopReading();
-
-  int archCheck;
-  if (day == 'm' || day == 'M') {
-    archCheck = 5;
-  } else if (day == 't' || day == 'T') {
-    archCheck = 6;
-  } else if (day == 'w' || day == 'W') {
-    archCheck = 7;
-  } else if (day == 'r' || day == 'R') {
-    archCheck = 8;
-  } else if (day == 'f' || day == 'F') {
-    archCheck = 9;
-  } else if (day == 's' || day == 'S') {
-    archCheck = 10;
-  } else if (day == 'n' || day == 'N') {
-    archCheck = 11;
-  }
-
-  
-  for (int i = 0; i < archiveCount; i++) {
-    if (archive[i][archCheck] >= 65 && archive[i][archCheck] <= 90) {
-      bool archMatch = false;
-      for (int j = 0; j < caughtCount; j++) {
-        for (int k = 0; k < 12; k++) {
-          if (archive[i][k] != epcCaught[j][k]) {
-            break;
-          }
-          if (k == 11) {
-            archMatch = true;
-          }
-        }
-        if (j == caughtCount - 1) {
-          if (archMatch) {
-            Serial.print("Match: ");
-          } else {
-            Serial.print("Missing: ");
-          }
-          for (int k = 0; k < 3; k++) {
-            Serial.print(archive[i][k]);
-          }
-          Serial.println((int)archive[i][3]);
-        }
-      }
-    }
-  }
-  Serial.println("End");  
-}
-
-void writeRFID(char entry[]) {
-  Serial.println("Writing to RFID");
-  
-  byte responseType = nano.writeTagEPC(entry, 12);
-  
-  if (responseType == RESPONSE_SUCCESS)
-    Serial.write("13");
-  else
-    Serial.write("18");
 }
 
 void checkArchive() {
@@ -565,6 +459,50 @@ void checkArchive() {
       }
     }
   }
+}
+
+void walkingOnSunshine() {
+  tone(BUZZER1, 1568, 300);
+  delay(300);
+  tone(BUZZER1, 1865, 300);
+  delay(300);
+  tone(BUZZER1, 1568, 300);
+  delay(300);
+  tone(BUZZER1, 1245, 450);
+  delay(300);
+  tone(BUZZER1, 1568, 600);
+  delay(600);
+  tone(BUZZER1, 1396, 900);
+  delay(900);
+  delay(300);
+  tone(BUZZER1, 2093, 600);
+  delay(600);
+  tone(BUZZER1, 1865, 600);
+  delay(600);
+}
+
+void chimeUp() {
+  tone(BUZZER1, 2093, 150); //C
+  delay(150);
+  tone(BUZZER1, 2349, 150); //D
+  delay(150);
+  tone(BUZZER1, 2637, 150); //E
+  delay(150);
+  tone(BUZZER1, 2793, 150); //E
+  delay(150);
+  tone(BUZZER1, 3126, 150); //E
+  delay(150);
+}
+
+void alarmSound() {
+  tone(BUZZER1, 2637, 300); //C
+  delay(300);
+  tone(BUZZER1, 2349, 300); //D
+  delay(300);
+  tone(BUZZER1, 2637, 300); //E
+  delay(300);
+  tone(BUZZER1, 2349, 300); //E
+  delay(300);
 }
 
 boolean setupNano(long baudRate)
