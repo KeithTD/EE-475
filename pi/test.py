@@ -167,7 +167,7 @@ def writeTheDay(day):
 class SampleApp(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
-        self.attributes("-fullscreen", False)
+        self.attributes("-fullscreen", True)
         self.configure(background='black')
         self.bind("<Escape>", lambda event: self.attributes("-fullscreen", False))
         self.bind("<F11>", lambda event: self.attributes("-fullscreen", True))
@@ -202,18 +202,19 @@ class StartPage(tk.Frame):
         btn.place(x=400, y=480, anchor="s")
 
         tk.Button(self, text="Debug", font=('Helvetica', 24, "bold"), activebackground='blue',
-                     bg='blue', command=lambda:master.switch_frame(pageList[21])).place(x=800, y=480, anchor="se")
+                     bg='blue', command=lambda:master.switch_frame(pageList[10])).place(x=800, y=480, anchor="se")
         
         global date, day1
         day1 = datetime.datetime.today().weekday()
         today = writeTheDay(day1)
-        date = canvas.create_text(400, 125, text=today, anchor="n", fill="white", font=('Helvetica', 36, "bold"))
+        date = canvas.create_text(400, 150, text=today, anchor="n", fill="white", font=('Helvetica', 36, "bold"))
 
         global clock
-        clock = canvas.create_text(400, 0, text=time1, anchor="n", fill='white', font=('Helvetica', 100,"bold"))
+        clock = canvas.create_text(400, 0, text=time1, anchor="n", fill='white', font=('Helvetica', 125,"bold"))
 
         while ser.inWaiting():
             ser.read()
+            print("reading")
 
         def task():
             if ser.inWaiting():
@@ -232,7 +233,7 @@ class StartPage(tk.Frame):
             if time2 != time1:
                 time1 = time2
                 canvas.delete(clock)
-                clock = canvas.create_text(400, 0, text=time2, anchor="n", fill='white', font=('Helvetica', 100,"bold"))
+                clock = canvas.create_text(400, 0, text=time2, anchor="n", fill='white', font=('Helvetica', 125,"bold"))
                 day2 = datetime.datetime.today().weekday()
                 if day2 != day1:
                     day1 = day2
@@ -266,8 +267,10 @@ class PageOne(tk.Frame):
                      bg='red', command=lambda:master.switch_frame(PageTwo)).place(x=400, y=155, anchor="s")
         tk.Button(self, text="Modify/Delete an RFID", font=('Helvetica', 36, "bold"), activebackground='red',
                      bg='red', command=lambda:master.switch_frame(PageThree)).place(x=400, y=255, anchor="s")
-        tk.Button(self, text="    Manual Scan    ", font=('Helvetica', 36, "bold"), activebackground='red',
-                     bg='red', command=lambda:master.switch_frame(PageFour)).place(x=400, y=355, anchor="s")
+        tk.Button(self, text="Manual Scan", font=('Helvetica', 36, "bold"), activebackground='red',
+                     bg='red', command=lambda:master.switch_frame(PageFour)).place(x=50, y=355, anchor="sw")
+        tk.Button(self, text="Check Traffic", font=('Helvetica', 36, "bold"), activebackground='red',
+                     bg='red', command=lambda:master.switch_frame(PageTwentyTwo)).place(x=750, y=355, anchor="se")
         tk.Button(self, text="      RFID List      ", font=('Helvetica', 36, "bold"), activebackground='red',
                      bg='red', command=lambda:listRFID(master)).place(x=400, y=455, anchor="s")
         tk.Button(self, text="Back", font=('Helvetica', 36, "bold"), activebackground='blue',
@@ -537,7 +540,7 @@ class PageTen(tk.Frame):
         tk.Button(self, text="Back", font=('Helvetica', 48, "bold"), activebackground='blue',
                      bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
         tk.Button(self, text="Check Traffic", font=('Helvetica', 48, "bold"), activebackground='red',
-                     bg='red', command=lambda:master.switch_frame(PageTwentyOne)).place(x=800, y=480, anchor="se")
+                     bg='red', command=lambda:master.switch_frame(PageTwentyTwo)).place(x=800, y=480, anchor="se")
 
         self.after(10000, master.switch_frame, StartPage)
 
@@ -967,22 +970,22 @@ class PageTwentyOne(tk.Frame):
         tk.Frame.__init__(self, master)
         tk.Frame.configure(self,bg='black')
 
-        global apiKey
+        global apiKey, user
         gmaps = googlemaps.Client(key=apiKey)
         
         origin = "8001 25th St W, University Place, WA"
         destination = "Tacoma Dome Station, Tacoma, WA"
-        user1='j'
-        if user1 == 'g':
+        
+        if user == 'g':
             origin = "927 17th Ave, Seattle, WA"
             destination = "6750 S 228th St, Kent, WA"
-        if user1 == 'j':
+        if user == 'j':
             origin = "3520 SW Genesee St, Seattle, WA"
             destination = "1417 12th Ave, Seattle, WA"
-        if user1 == 'k':
+        if user == 'k':
             origin = "8001 25th St W, University Place, WA"
             destination = "Tacoma Dome Station, Tacoma, WA"
-        if user1 == 'r':
+        if user == 'r':
             origin = "153 N 78th St, Seattle, WA"
             destination = "Sieg Hall, Seattle, WA"
 
@@ -1020,11 +1023,24 @@ class PageTwentyOne(tk.Frame):
         panel.place(x=800, y=0, anchor="ne")
 
         self.after(60000, master.switch_frame, StartPage)
+
+#Loading Traffic Screen
+class PageTwentyTwo(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        tk.Frame.configure(self,bg='green')
+        tk.Label(self, text="Checking Traffic...", fg='white', bg='green',
+                 font=('Helvetica', 64, "bold")).place(x=400, y=240, anchor="c")
+        tk.Button(self, text="Back", font=('Helvetica', 48, "bold"), activebackground='blue',
+                     bg='blue', command=lambda:master.switch_frame(StartPage)).place(x=0, y=480, anchor="sw")
+
+        self.after(500, master.switch_frame, PageTwentyOne)
         
         
 pageList=[StartPage,PageOne,PageTwo,PageThree,PageFour,PageFive,PageSix,PageSeven,
           PageEight,PageNine,PageTen,PageEleven,PageTwelve,PageThirteen,PageFourteen,
-          PageFifteen,PageSixteen,PageSeventeen,PageEighteen,PageNineteen,PageTwenty, PageTwentyOne]
+          PageFifteen,PageSixteen,PageSeventeen,PageEighteen,PageNineteen,PageTwenty,
+          PageTwentyOne, PageTwentyTwo]
 
 if __name__ == "__main__":
     app = SampleApp()
