@@ -111,6 +111,11 @@ while(True):
         print(result)
         #uart_A.write(result)
         print('Restarting...')
+        #if result == 'Peter':
+        #    uart2.write("1tk")
+        #    uart1.write("b")
+        uart2.write("1tk")
+        uart1.write("b")
         time.sleep(5)
         print('Ready for rescan')
         faceDetected = False
