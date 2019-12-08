@@ -36,8 +36,8 @@ lcd.direction(lcd.YX_RLDU)
 lcd.clear()
 lcd.draw_string(100,96,"MobileNet Demo")
 lcd.draw_string(100,112,"Loading labels...")
-labels = ['Eric', 'Peter', 'Lena', 'Ben','Trump']
-#labels = ["daisy", "dandelion", "roses", "sunflowers", "tulips"]
+#labels = ['Eric', 'Peter', 'Keith', 'Ben','Trump']
+labels = ["daisy", "dandelion", "roses", "sunflowers", "tulips"]
 task = kpu.load("/sd/kmodel/flowers.kmodel")
 clock = time.clock()
 lcd.clear()
@@ -82,7 +82,7 @@ while(True):
     # face recog
     if faceDetected:
         #takes 6.5 sec
-        pmax=0.0
+        fcount = [0] * 5
         for i in range(100):
             time.sleep(0.01)
             img2 = sensor.snapshot()
@@ -90,33 +90,41 @@ while(True):
             fmap = kpu.forward(task, img2)
             fps=clock.fps()
             plist=fmap[:]
-            if max(plist) > pmax:
-                pmax=max(plist)
-                max_index=plist.index(pmax)
+            pmax=max(plist)
+            max_index=plist.index(pmax)
             #a = lcd.display(img2, oft=(96,56))
             #a = lcd.display(img2, oft=(48,0))
             lcd.display(img2)
             lcd.draw_string(0, 224, "%.2f:%s                            "%(pmax, labels[max_index].strip()))
-            print("pmax:")
             print(pmax)
-            print("curr value:")
-            print(max(plist))
+            curr = plist.index(max(plist))
+            fcount[curr] = fcount[curr] + 1
+
 
         # write to uart
-        if pmax < 0.5:
+        if labels[fcount.index(max(fcount))] == 'A':
             result = "error"
         else:
-            result = labels[plist.index(max(plist))]
+            result = labels[fcount.index(max(fcount))]
+
         print("result:")
         print(result)
-        #uart_A.write(result)
         print('Restarting...')
         #if result == 'Peter':
         #    uart2.write("1tk")
         #    uart1.write("b")
-        uart2.write("1tk")
+        #uart2.write("1tk")
+        if result == "dandelion":
+            user = 'k'
+        elif result == "roses":
+            user = 'j'
+        elif result == "tulips":
+            user = 'g'
+        elif result == "daisy":
+            user = 'r'
         uart1.write("b")
-        time.sleep(5)
+        lcd.draw_string(100,0,"Final result:" + result)
+        #time.sleep(5)
         print('Ready for rescan')
         faceDetected = False
 
@@ -217,5 +225,3 @@ while(True):
                 print("entry3(20):")
                 print(entry3)
                 uart1.write(entry3)
-
-
